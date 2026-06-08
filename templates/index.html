@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentiment Analyzer - SPB AI Club</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --burgundy: #660033; --burgundy-l: #8b0044; --bg: #0d0d0d; --surface: #161616; --border: #262626; --text: #e8e8e8; --muted: #666; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1rem; font-weight: 600; }
+    header span { font-size: .8rem; color: var(--muted); }
+    .main { max-width: 760px; margin: 3rem auto; padding: 0 1.5rem; }
+    h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: .5rem; }
+    .sub { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; }
+    textarea {
+      width: 100%; min-height: 100px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-family: inherit; font-size: .95rem;
+      padding: 1rem; resize: vertical; outline: none; transition: border-color .2s;
+    }
+    textarea:focus { border-color: var(--burgundy); }
+    .btn {
+      display: inline-block; margin-top: 1rem; padding: .7rem 2rem;
+      background: var(--burgundy); color: #fff; border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .btn:hover { background: var(--burgundy-l); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .result { margin-top: 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; display: none; }
+    .result-label { font-size: 2rem; font-weight: 800; margin-bottom: 1rem; }
+    .bars { display: flex; flex-direction: column; gap: .6rem; }
+    .bar-row { display: grid; grid-template-columns: 80px 1fr 50px; align-items: center; gap: .75rem; }
+    .bar-label { font-size: .85rem; }
+    .bar-bg { height: 8px; border-radius: 4px; background: #222; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+    .bar-val { font-size: .8rem; font-family: 'JetBrains Mono', monospace; text-align: right; color: var(--muted); }
+    .samples { margin-top: 2.5rem; }
+    .samples h3 { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; }
+    .sample { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin-bottom: .5rem; font-size: .875rem; cursor: pointer; transition: border-color .2s; }
+    .sample:hover { border-color: var(--burgundy); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Market Sentiment Analyzer</h1>
+    <span>SPB AI &amp; Data Science Club</span>
+  </header>
+  <div class="main">
+    <h2>Analyze a Headline</h2>
+    <p class="sub">Paste any financial news headline to classify it as Bullish, Neutral, or Bearish.</p>
+
+    <textarea id="input" placeholder="Enter a news headline..."></textarea>
+    <button class="btn" id="analyzeBtn" onclick="analyze()">Analyze</button>
+
+    <div class="result" id="result">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="bars">
+        <div class="bar-row">
+          <span class="bar-label">Bullish</span>
+          <div class="bar-bg"><div class="bar-fill" id="barBull" style="background:#4ade80;width:0%"></div></div>
+          <span class="bar-val" id="valBull">0%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Neutral</span>
+          <div class="bar-bg"><div class="bar-fill" id="barNeut" style="background:#fbbf24;width:0%"></div></div>
+          <span class="bar-val" id="valNeut">0%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Bearish</span>
+          <div class="bar-bg"><div class="bar-fill" id="barBear" style="background:#f87171;width:0%"></div></div>
+          <span class="bar-val" id="valBear">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="samples">
+      <h3>Try a Sample</h3>
+      {% for s in samples %}
+      <div class="sample" onclick="useSample(this)">{{ s }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    function useSample(el) {
+      document.getElementById('input').value = el.textContent;
+    }
+
+    async function analyze() {
+      const text = document.getElementById('input').value.trim();
+      if (!text) return;
+      const btn = document.getElementById('analyzeBtn');
+      btn.disabled = true; btn.textContent = 'Analyzing...';
+
+      try {
+        const res  = await fetch('/api/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text}) });
+        const data = await res.json();
+        if (data.error) { alert(data.error); return; }
+
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('resultLabel').textContent = data.icon + ' ' + data.label;
+        document.getElementById('resultLabel').style.color = data.color;
+
+        document.getElementById('barBull').style.width = data.scores.bullish + '%';
+        document.getElementById('barNeut').style.width = data.scores.neutral + '%';
+        document.getElementById('barBear').style.width = data.scores.bearish + '%';
+        document.getElementById('valBull').textContent = data.scores.bullish + '%';
+        document.getElementById('valNeut').textContent = data.scores.neutral + '%';
+        document.getElementById('valBear').textContent = data.scores.bearish + '%';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Analyze';
+      }
+    }
+  </script>
+</body>
+</html>
