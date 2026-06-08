@@ -4,115 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sentiment Analyzer - SPB AI Club</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --burgundy: #660033; --burgundy-l: #8b0044; --bg: #0d0d0d; --surface: #161616; --border: #262626; --text: #e8e8e8; --muted: #666; }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
-    header h1 { font-size: 1rem; font-weight: 600; }
-    header span { font-size: .8rem; color: var(--muted); }
-    .main { max-width: 760px; margin: 3rem auto; padding: 0 1.5rem; }
-    h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: .5rem; }
-    .sub { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; }
-    textarea {
-      width: 100%; min-height: 100px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text); font-family: inherit; font-size: .95rem;
-      padding: 1rem; resize: vertical; outline: none; transition: border-color .2s;
-    }
-    textarea:focus { border-color: var(--burgundy); }
-    .btn {
-      display: inline-block; margin-top: 1rem; padding: .7rem 2rem;
-      background: var(--burgundy); color: #fff; border: none; border-radius: 8px;
-      font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .2s;
-    }
-    .btn:hover { background: var(--burgundy-l); }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-    .result { margin-top: 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; display: none; }
-    .result-label { font-size: 2rem; font-weight: 800; margin-bottom: 1rem; }
-    .bars { display: flex; flex-direction: column; gap: .6rem; }
-    .bar-row { display: grid; grid-template-columns: 80px 1fr 50px; align-items: center; gap: .75rem; }
-    .bar-label { font-size: .85rem; }
-    .bar-bg { height: 8px; border-radius: 4px; background: #222; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
-    .bar-val { font-size: .8rem; font-family: 'JetBrains Mono', monospace; text-align: right; color: var(--muted); }
-    .samples { margin-top: 2.5rem; }
-    .samples h3 { font-size: .85rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; }
-    .sample { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin-bottom: .5rem; font-size: .875rem; cursor: pointer; transition: border-color .2s; }
-    .sample:hover { border-color: var(--burgundy); }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
-  <header>
-    <h1>Market Sentiment Analyzer</h1>
-    <span>SPB AI &amp; Data Science Club</span>
+
+  <header class="site-header">
+    <div class="header-logo">
+      <div class="logo-mark">SA</div>
+      <div>
+        <div class="header-title">Market Sentiment Analyzer</div>
+        <div class="header-sub">SPB AI &amp; Data Science Club</div>
+      </div>
+    </div>
+    <a href="https://github.com/SPB-AI-Data-Science-Club/sentiment-analyzer" target="_blank" class="header-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+      </svg>
+      GitHub
+    </a>
   </header>
+
   <div class="main">
-    <h2>Analyze a Headline</h2>
-    <p class="sub">Paste any financial news headline to classify it as Bullish, Neutral, or Bearish.</p>
 
-    <textarea id="input" placeholder="Enter a news headline..."></textarea>
-    <button class="btn" id="analyzeBtn" onclick="analyze()">Analyze</button>
+    <div class="input-panel">
+      <div>
+        <div class="input-label">Headline</div>
+        <textarea id="inputText" placeholder="Enter a financial news headline..."></textarea>
+      </div>
 
-    <div class="result" id="result">
-      <div class="result-label" id="resultLabel"></div>
-      <div class="bars">
-        <div class="bar-row">
-          <span class="bar-label">Bullish</span>
-          <div class="bar-bg"><div class="bar-fill" id="barBull" style="background:#4ade80;width:0%"></div></div>
-          <span class="bar-val" id="valBull">0%</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">Neutral</span>
-          <div class="bar-bg"><div class="bar-fill" id="barNeut" style="background:#fbbf24;width:0%"></div></div>
-          <span class="bar-val" id="valNeut">0%</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">Bearish</span>
-          <div class="bar-bg"><div class="bar-fill" id="barBear" style="background:#f87171;width:0%"></div></div>
-          <span class="bar-val" id="valBear">0%</span>
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">Analyze</button>
+
+      <div class="result-card" id="resultCard">
+        <div class="result-label" id="resultLabel"></div>
+        <div class="score-bars">
+          <div class="score-row">
+            <div class="score-meta">
+              <span class="score-name">Bullish</span>
+              <span class="score-pct" id="pctBullish">0%</span>
+            </div>
+            <div class="score-track">
+              <div class="score-fill" id="fillBullish" style="background:#4ade80"></div>
+            </div>
+          </div>
+          <div class="score-row">
+            <div class="score-meta">
+              <span class="score-name">Neutral</span>
+              <span class="score-pct" id="pctNeutral">0%</span>
+            </div>
+            <div class="score-track">
+              <div class="score-fill" id="fillNeutral" style="background:#fbbf24"></div>
+            </div>
+          </div>
+          <div class="score-row">
+            <div class="score-meta">
+              <span class="score-name">Bearish</span>
+              <span class="score-pct" id="pctBearish">0%</span>
+            </div>
+            <div class="score-track">
+              <div class="score-fill" id="fillBearish" style="background:#f87171"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="samples">
-      <h3>Try a Sample</h3>
+    <div class="samples-panel">
+      <div class="samples-label">Sample Headlines</div>
       {% for s in samples %}
-      <div class="sample" onclick="useSample(this)">{{ s }}</div>
+      <div class="sample-item" onclick="useSample(this)">{{ s }}</div>
       {% endfor %}
     </div>
+
   </div>
 
   <script>
     function useSample(el) {
-      document.getElementById('input').value = el.textContent;
+      document.getElementById('inputText').value = el.textContent.trim();
     }
 
     async function analyze() {
-      const text = document.getElementById('input').value.trim();
+      const text = document.getElementById('inputText').value.trim();
       if (!text) return;
+
       const btn = document.getElementById('analyzeBtn');
-      btn.disabled = true; btn.textContent = 'Analyzing...';
+      btn.disabled = true;
+      btn.textContent = 'Analyzing...';
 
       try {
-        const res  = await fetch('/api/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text}) });
+        const res  = await fetch('/api/analyze', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ text }),
+        });
         const data = await res.json();
         if (data.error) { alert(data.error); return; }
 
-        document.getElementById('result').style.display = 'block';
-        document.getElementById('resultLabel').textContent = data.icon + ' ' + data.label;
-        document.getElementById('resultLabel').style.color = data.color;
+        const card = document.getElementById('resultCard');
+        card.classList.add('visible');
 
-        document.getElementById('barBull').style.width = data.scores.bullish + '%';
-        document.getElementById('barNeut').style.width = data.scores.neutral + '%';
-        document.getElementById('barBear').style.width = data.scores.bearish + '%';
-        document.getElementById('valBull').textContent = data.scores.bullish + '%';
-        document.getElementById('valNeut').textContent = data.scores.neutral + '%';
-        document.getElementById('valBear').textContent = data.scores.bearish + '%';
+        const lbl = document.getElementById('resultLabel');
+        lbl.textContent  = data.label;
+        lbl.style.color  = data.color;
+
+        setBar('Bullish', data.scores['Bullish']);
+        setBar('Neutral',  data.scores['Neutral']);
+        setBar('Bearish',  data.scores['Bearish']);
+
+      } catch (err) {
+        alert('Request failed: ' + err.message);
       } finally {
-        btn.disabled = false; btn.textContent = 'Analyze';
+        btn.disabled = false;
+        btn.textContent = 'Analyze';
       }
     }
+
+    function setBar(name, pct) {
+      document.getElementById('pct'  + name).textContent = pct.toFixed(1) + '%';
+      document.getElementById('fill' + name).style.width = Math.min(pct, 100) + '%';
+    }
+
+    document.getElementById('inputText').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(); }
+    });
   </script>
 </body>
 </html>

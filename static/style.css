@@ -1,0 +1,195 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --burgundy:   #660033;
+  --burgundy-l: #8b0044;
+  --bg:         #0d0d0d;
+  --surface:    #141414;
+  --surface-2:  #1c1c1c;
+  --border:     #242424;
+  --border-l:   #2e2e2e;
+  --text:       #e8e8e8;
+  --muted:      #666;
+  --dim:        #999;
+  --radius:     10px;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.header-logo { display: flex; align-items: center; gap: .65rem; }
+
+.logo-mark {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: var(--burgundy);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.header-title { font-size: .95rem; font-weight: 600; }
+.header-sub   { font-size: .72rem; color: var(--muted); }
+
+.header-link {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .8rem; color: var(--muted); text-decoration: none;
+  transition: color .2s;
+}
+.header-link:hover { color: var(--text); }
+
+/* Main layout */
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+/* Left: input */
+.input-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.input-label {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .4rem;
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .9rem;
+  line-height: 1.6;
+  padding: 1rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color .2s;
+}
+textarea:focus { border-color: var(--burgundy); }
+textarea::placeholder { color: var(--muted); }
+
+.analyze-btn {
+  align-self: flex-start;
+  padding: .65rem 1.75rem;
+  background: var(--burgundy);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .2s;
+}
+.analyze-btn:hover:not(:disabled) { background: var(--burgundy-l); }
+.analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Result card */
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: none;
+}
+.result-card.visible { display: block; }
+
+.result-label {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin-bottom: 1.25rem;
+}
+
+.score-bars { display: flex; flex-direction: column; gap: .85rem; }
+
+.score-row { display: flex; flex-direction: column; gap: .35rem; }
+
+.score-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: .82rem;
+}
+.score-name { color: var(--dim); font-weight: 500; }
+.score-pct  { font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+
+.score-track {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.score-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+  width: 0%;
+}
+
+/* Samples panel */
+.samples-panel {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.samples-label {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sample-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  font-size: .84rem;
+  color: var(--dim);
+  cursor: pointer;
+  line-height: 1.45;
+  transition: border-color .18s, color .18s;
+}
+.sample-item:hover { border-color: var(--border-l); color: var(--text); }
