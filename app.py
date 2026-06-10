@@ -132,7 +132,7 @@ def stock_data():
 
     try:
         t    = yf.Ticker(ticker)
-        hist = t.history(period="1mo")
+        hist = t.history(period="1mo").dropna(subset=["Close"])
         if hist.empty:
             return jsonify({"error": f"No data found for '{ticker}'. Check the ticker symbol."}), 404
 
@@ -141,7 +141,7 @@ def stock_data():
 
         closes = [round(float(c), 2) for c in hist["Close"]]
         dates  = [d.strftime("%Y-%m-%d") for d in hist.index]
-        volumes = [int(v) for v in hist["Volume"]]
+        volumes = [int(v) if v == v else 0 for v in hist["Volume"]]
 
         start = closes[0]
         end   = closes[-1]
@@ -183,7 +183,7 @@ def stock_sentiment():
 
     try:
         t    = yf.Ticker(ticker)
-        hist = t.history(period="1mo")
+        hist = t.history(period="1mo").dropna(subset=["Close"])
         if hist.empty:
             return jsonify({"error": f"No data found for '{ticker}'"}), 404
         info = t.info
@@ -193,7 +193,7 @@ def stock_sentiment():
 
     closes  = [round(float(c), 2) for c in hist["Close"]]
     dates   = [d.strftime("%Y-%m-%d") for d in hist.index]
-    volumes = [int(v) for v in hist["Volume"]]
+    volumes = [int(v) if v == v else 0 for v in hist["Volume"]]
     start   = closes[0]
     end     = closes[-1]
     chg     = round(end - start, 2)
