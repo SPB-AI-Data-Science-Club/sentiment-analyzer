@@ -1,133 +1,693 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sentiment Analyzer - SPB AI Club</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="icon" type="image/png" href="/static/logo.png" />
+  <title>Market Sentiment Analyzer - SPB AI Club</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#090909;--surface:#141414;--surface-2:#1a1a1a;--border:#222;--border-l:#2e2e2e;--text:#ebebeb;--dim:#aaa;--muted:#666;--bull:#4ade80;--neu:#fbbf24;--bear:#f87171;--blue:#4a90d9;--accent:#8b0044;--accent2:#660033;--radius:10px}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.6}
+    a{color:inherit;text-decoration:none}
+
+    /* Layout */
+    .shell{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
+    .sidebar{background:#0d0d0d;border-right:1px solid var(--border);padding:1.75rem 1.4rem;display:flex;flex-direction:column;gap:1.4rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .main{padding:2.25rem 2.5rem;overflow-y:auto}
+
+    /* Header */
+    .logo{display:flex;align-items:center;gap:.75rem}
+    .logo-name{font-size:.92rem;font-weight:700;line-height:1.2}
+    .logo-sub{font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+    /* GPU status pill */
+    .gpu-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .65rem;border-radius:999px;border:1px solid var(--border-l);background:var(--surface-2);font-size:.68rem;font-weight:600;letter-spacing:.04em;cursor:default}
+    .gpu-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .gpu-dot.ready{background:#4ade80;box-shadow:0 0 5px #4ade8099;animation:glow 2s ease-in-out infinite}
+    .gpu-dot.busy{background:#fbbf24;animation:glow 1s ease-in-out infinite}
+    .gpu-dot.offline{background:#444}
+    .gpu-txt.ready{color:#4ade80}
+    .gpu-txt.busy{color:#fbbf24}
+    .gpu-txt.offline{color:#666}
+    @keyframes glow{0%,100%{opacity:1}50%{opacity:.45}}
+
+    /* Tabs */
+    .section-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.55rem}
+    .tab-row{display:flex;gap:.3rem;margin-bottom:.9rem}
+    .tab{flex:1;padding:.45rem .4rem;border-radius:6px;font-size:.76rem;font-weight:600;text-align:center;cursor:pointer;border:1px solid var(--border-l);color:var(--dim);background:var(--surface-2);transition:all .15s}
+    .tab.active{background:rgba(102,0,51,.3);border-color:rgba(102,0,51,.5);color:#fff}
+
+    /* Inputs */
+    textarea{width:100%;background:var(--surface-2);border:1px solid var(--border-l);border-radius:8px;padding:.75rem;font-size:.88rem;font-family:inherit;color:var(--text);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6}
+    textarea:focus{border-color:var(--accent)}
+    textarea::placeholder{color:var(--muted)}
+    #batchInput{font-family:'JetBrains Mono',monospace;font-size:.82rem;min-height:130px}
+    #singleInput{min-height:80px}
+
+    .ticker-wrap{position:relative;display:flex;gap:.4rem}
+    .ticker-input{flex:1;background:var(--surface-2);border:1px solid var(--border-l);border-radius:8px;padding:.6rem .85rem;font-size:.95rem;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--text);outline:none;text-transform:uppercase;letter-spacing:.06em;transition:border-color .15s}
+    .ticker-input:focus{border-color:var(--accent)}
+    .ticker-input::placeholder{font-weight:400;text-transform:none;letter-spacing:0;font-size:.82rem}
+
+    .action-btn{padding:.55rem .95rem;border:none;border-radius:8px;font-size:.85rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s;white-space:nowrap}
+    .btn-primary{background:var(--accent2);color:#fff}
+    .btn-primary:hover{background:var(--accent)}
+    .btn-primary:disabled{opacity:.5;cursor:default}
+    .analyze-btn{width:100%;padding:.65rem;background:var(--accent2);color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s;margin-top:.5rem}
+    .analyze-btn:hover{background:var(--accent)}
+    .analyze-btn:disabled{opacity:.5;cursor:default}
+
+    .batch-hint{font-size:.7rem;color:var(--muted);margin-top:.35rem;line-height:1.5}
+    .panel-col{display:flex;flex-direction:column;gap:.5rem}
+
+    /* Ticker grid */
+    .ticker-grid{display:grid;grid-template-columns:1fr 1fr;gap:.3rem}
+    .ticker-chip{padding:.4rem .55rem;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);cursor:pointer;transition:all .15s;text-align:left}
+    .ticker-chip:hover{border-color:rgba(102,0,51,.4);background:rgba(102,0,51,.12)}
+    .ticker-chip-sym{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;color:var(--text);display:block}
+    .ticker-chip-name{font-size:.65rem;color:var(--muted);display:block;margin-top:.05rem}
+
+    /* Samples */
+    .samples-list{display:flex;flex-direction:column;gap:.3rem}
+    .sample-chip{font-size:.74rem;color:var(--dim);padding:.45rem .65rem;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all .15s;line-height:1.4}
+    .sample-chip:hover{color:var(--text);border-color:var(--border-l)}
+
+    /* Main area */
+    .main-title{font-size:1.75rem;font-weight:800;letter-spacing:-.028em;margin-bottom:.3rem}
+    .main-sub{font-size:.92rem;color:var(--dim);margin-bottom:2rem;line-height:1.6}
+
+    /* Stock header */
+    .stock-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
+    .stock-name-row{}
+    .stock-ticker-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:.08em;color:#888;background:var(--surface-2);border:1px solid var(--border-l);border-radius:4px;padding:.15rem .45rem;margin-bottom:.3rem}
+    .stock-name{font-size:1.45rem;font-weight:800;letter-spacing:-.025em;margin-bottom:.2rem}
+    .stock-sector{font-size:.75rem;color:var(--muted)}
+    .stock-price-row{text-align:right}
+    .stock-price{font-size:1.9rem;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-.02em;margin-bottom:.2rem}
+    .stock-chg{font-size:.85rem;font-family:'JetBrains Mono',monospace;font-weight:600}
+    .stock-period{font-size:.68rem;color:var(--muted);margin-top:.2rem}
+    .pos{color:var(--bull)} .neg{color:var(--bear)} .flat{color:var(--dim)}
+
+    .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+    .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem}
+    .stat-label{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+    .stat-val{font-size:1rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text)}
+
+    /* Chart */
+    .chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem 1rem;margin-bottom:1.5rem}
+    .chart-title{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.85rem}
+    #stockChart{height:220px}
+
+    /* News */
+    .news-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
+    .news-section-title{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .sentiment-pill{font-size:.68rem;font-weight:700;padding:.2rem .65rem;border-radius:999px}
+    .sp-bull{background:rgba(74,222,128,.12);color:var(--bull);border:1px solid rgba(74,222,128,.25)}
+    .sp-neu{background:rgba(251,191,36,.12);color:var(--neu);border:1px solid rgba(251,191,36,.25)}
+    .sp-bear{background:rgba(248,113,113,.12);color:var(--bear);border:1px solid rgba(248,113,113,.25)}
+
+    .news-list{display:flex;flex-direction:column;gap:.5rem}
+    .news-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;display:flex;align-items:flex-start;gap:.9rem;transition:border-color .15s}
+    .news-card:hover{border-color:var(--border-l)}
+    .news-badge{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.22rem .55rem;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:.1rem}
+    .nb-bull{background:rgba(74,222,128,.15);color:var(--bull);border:1px solid rgba(74,222,128,.3)}
+    .nb-neu{background:rgba(251,191,36,.15);color:var(--neu);border:1px solid rgba(251,191,36,.3)}
+    .nb-bear{background:rgba(248,113,113,.15);color:var(--bear);border:1px solid rgba(248,113,113,.3)}
+    .nb-dim{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+    .news-body{flex:1;min-width:0}
+    .news-title{font-size:.88rem;font-weight:500;line-height:1.45;color:var(--text);margin-bottom:.25rem}
+    .news-meta{font-size:.68rem;color:var(--muted)}
+    .news-conf{font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--muted);flex-shrink:0;padding-top:.15rem}
+
+    /* Aggregate sentiment */
+    .agg-bar-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-top:1.1rem}
+    .agg-bar-item{}
+    .agg-bar-head{display:flex;justify-content:space-between;margin-bottom:.3rem}
+    .agg-bar-name{font-size:.72rem;font-weight:600}
+    .agg-bar-pct{font-size:.72rem;font-family:'JetBrains Mono',monospace;font-weight:600}
+    .bar-bg{height:7px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:999px;transition:width .6s ease}
+    .bf-bull{background:var(--bull)} .bf-neu{background:var(--neu)} .bf-bear{background:var(--bear)}
+
+    /* Headline result (single/batch mode) */
+    .result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;margin-bottom:1.5rem}
+    .result-label{font-size:2.2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:.2rem}
+    .result-preview{font-size:.86rem;color:var(--dim);font-style:italic;margin-bottom:1.25rem;line-height:1.55;border-left:2px solid var(--border-l);padding-left:.75rem}
+    .conf-row{display:flex;flex-direction:column;gap:.65rem}
+    .conf-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem}
+    .conf-name{font-size:.78rem;font-weight:600;letter-spacing:.04em}
+    .conf-pct{font-size:.82rem;font-family:'JetBrains Mono',monospace;font-weight:600}
+    .conf-bar-bg{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+    .conf-bar{height:100%;border-radius:999px;transition:width .6s ease}
+    .bar-bull{background:var(--bull)} .bar-neu{background:var(--neu)} .bar-bear{background:var(--bear)}
+
+    .agg-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;margin-bottom:1.5rem}
+    .agg-label-big{font-size:1.9rem;font-weight:800;letter-spacing:-.025em}
+    .agg-meta{font-size:.75rem;font-family:'JetBrains Mono',monospace;color:var(--dim);margin-top:.3rem;margin-bottom:1rem}
+    .headline-list{display:flex;flex-direction:column;gap:.45rem}
+    .headline-card{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;display:flex;align-items:center;gap:.85rem}
+    .h-badge{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .5rem;border-radius:4px;white-space:nowrap;flex-shrink:0}
+    .h-text{font-size:.84rem;color:var(--dim);flex:1;line-height:1.4}
+    .h-pct{font-size:.75rem;font-family:'JetBrains Mono',monospace;color:var(--muted);flex-shrink:0}
+
+    /* Offline banner */
+    .gpu-banner{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:.9rem 1.1rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.7rem}
+    .gpu-banner svg{flex-shrink:0;margin-top:.1rem;opacity:.7}
+    .gpu-banner-title{font-size:.8rem;font-weight:700;color:#f87171;margin-bottom:.15rem}
+    .gpu-banner-sub{font-size:.76rem;color:var(--dim);line-height:1.5}
+
+    /* Ethics notice */
+    .ethics-note{font-size:.7rem;color:var(--muted);line-height:1.5;padding:.7rem .85rem;background:var(--surface-2);border-radius:6px;border:1px solid var(--border)}
+    .ethics-note a{color:var(--accent);text-decoration:underline}
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:5rem 2rem;color:var(--muted)}
+    .empty-icon{margin-bottom:1rem;opacity:.2}
+    .empty-text{font-size:1rem;line-height:1.6}
+
+    /* Spinner */
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:.4rem}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .hidden{display:none!important}
+
+    @media(max-width:768px){.shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}.main{padding:1.5rem}.stat-row{grid-template-columns:1fr 1fr}}
+  </style>
 </head>
 <body>
+<div class="shell">
 
-  <header class="site-header">
-    <div class="header-logo">
-      <div class="logo-mark">SA</div>
-      <div>
-        <div class="header-title">Market Sentiment Analyzer</div>
-        <div class="header-sub">SPB AI &amp; Data Science Club</div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="/static/logo.png" alt="Sentiment Analyzer" style="width:44px;height:44px;border-radius:9px;object-fit:contain;display:block;flex-shrink:0"/>
+      <div class="logo-name">Sentiment Analyzer</div>
+    </div>
+
+    <!-- GPU status pill -->
+    <div>
+      <div class="gpu-pill" id="gpuPill">
+        <div class="gpu-dot offline" id="gpuDot"></div>
+        <span class="gpu-txt offline" id="gpuTxt">Checking GPU...</span>
       </div>
     </div>
-    <a href="https://github.com/SPB-AI-Data-Science-Club/sentiment-analyzer" target="_blank" class="header-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
-      </svg>
-      GitHub
-    </a>
-  </header>
 
-  <div class="main">
-
-    <div class="input-panel">
-      <div>
-        <div class="input-label">Headline</div>
-        <textarea id="inputText" placeholder="Enter a financial news headline..."></textarea>
+    <!-- Mode tabs -->
+    <div>
+      <div class="section-label">Analysis Mode</div>
+      <div class="tab-row">
+        <div class="tab active" id="tabStock" onclick="setMode('stock')">Stock Tracker</div>
+        <div class="tab" id="tabSingle" onclick="setMode('single')">Headline</div>
+        <div class="tab" id="tabBatch" onclick="setMode('batch')">Batch</div>
       </div>
 
-      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">Analyze</button>
+      <!-- Stock mode input -->
+      <div id="stockPanel" class="panel-col">
+        <div class="ticker-wrap">
+          <input id="tickerInput" class="ticker-input" type="text" placeholder="Ticker symbol (e.g. AAPL)"
+                 maxlength="10" onkeydown="if(event.key==='Enter') loadStock()" />
+          <button class="action-btn btn-primary" onclick="loadStock()">Go</button>
+        </div>
+        <div class="section-label" style="margin-top:.65rem;margin-bottom:.4rem">Popular Stocks</div>
+        <div class="ticker-grid">
+          {% for t in popular %}
+          <div class="ticker-chip" onclick="quickTicker('{{ t.sym }}')">
+            <span class="ticker-chip-sym">{{ t.sym }}</span>
+            <span class="ticker-chip-name">{{ t.name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
 
-      <div class="result-card" id="resultCard">
-        <div class="result-label" id="resultLabel"></div>
-        <div class="score-bars">
-          <div class="score-row">
-            <div class="score-meta">
-              <span class="score-name">Bullish</span>
-              <span class="score-pct" id="pctBullish">0%</span>
+      <!-- Single headline mode -->
+      <div id="singlePanel" class="panel-col hidden">
+        <textarea id="singleInput" placeholder="Paste a financial headline..." rows="4"></textarea>
+        <button class="analyze-btn" id="singleBtn" onclick="analyzeSingle()">Analyze Sentiment</button>
+      </div>
+
+      <!-- Batch mode -->
+      <div id="batchPanel" class="panel-col hidden">
+        <textarea id="batchInput" placeholder="One headline per line...&#10;&#10;Apple beats earnings estimates&#10;Fed raises interest rates&#10;Oil falls on demand fears" rows="8"></textarea>
+        <div class="batch-hint">One headline per line. Up to 20 headlines at once.</div>
+        <button class="analyze-btn" id="batchBtn" onclick="analyzeBatch()">Analyze All</button>
+      </div>
+    </div>
+
+    <!-- Samples (single/batch mode only) -->
+    <div id="samplesSection" class="hidden">
+      <div class="section-label">Quick Samples</div>
+      <div class="samples-list">
+        {% for s in samples %}
+        <div class="sample-chip" onclick="useSample(this.textContent.trim())">{{ s }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Ethics notice -->
+    <div class="ethics-note">
+      This tool is for educational purposes only. Do not use AI sentiment analysis to make real investment decisions or to manipulate markets. Past sentiment patterns do not guarantee future price movements.
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main">
+    <div class="main-title" id="mainTitle">Stock Tracker</div>
+    <div class="main-sub" id="mainSub">Live price data from Yahoo Finance + AI sentiment scoring on recent news</div>
+
+    <!-- GPU offline banner (shown only when needed) -->
+    <div class="gpu-banner hidden" id="gpuBanner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div>
+        <div class="gpu-banner-title">Sentiment GPU Offline</div>
+        <div class="gpu-banner-sub">Stock data and charts are fully available. Sentiment scoring requires the RTX 5080 GPU compute server, which is currently offline.</div>
+      </div>
+    </div>
+
+    <!-- Stock mode result panel -->
+    <div id="stockResult" class="hidden">
+
+      <div class="stock-header">
+        <div class="stock-name-row">
+          <div class="stock-ticker-badge" id="sTickerBadge">AAPL</div>
+          <div class="stock-name" id="sName">Apple Inc.</div>
+          <div class="stock-sector" id="sSector"></div>
+        </div>
+        <div class="stock-price-row">
+          <div class="stock-price" id="sPrice">$0.00</div>
+          <div class="stock-chg" id="sChg"></div>
+          <div class="stock-period">30-day window</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-label">30D Change</div>
+          <div class="stat-val" id="sStatChg">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">52W High</div>
+          <div class="stat-val" id="sStat52H">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">52W Low</div>
+          <div class="stat-val" id="sStat52L">-</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-title">30-Day Price History</div>
+        <div id="stockChart"></div>
+      </div>
+
+      <div class="news-section-head">
+        <div class="news-section-title">Recent News</div>
+        <div id="aggSentimentPill" class="hidden"></div>
+      </div>
+      <div class="news-list" id="newsList"></div>
+
+      <!-- Aggregate sentiment bars (shown when GPU online) -->
+      <div id="aggBarsSection" class="hidden" style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.4rem;">
+        <div class="section-label" style="margin-bottom:.75rem">Aggregate News Sentiment</div>
+        <div class="agg-bar-row">
+          <div class="agg-bar-item">
+            <div class="agg-bar-head">
+              <span class="agg-bar-name" style="color:var(--bull)">Bullish</span>
+              <span class="agg-bar-pct" id="aggBullPct" style="color:var(--bull)"></span>
             </div>
-            <div class="score-track">
-              <div class="score-fill" id="fillBullish" style="background:#4ade80"></div>
-            </div>
+            <div class="bar-bg"><div class="bar-fill bf-bull" id="aggBullBar" style="width:0%"></div></div>
           </div>
-          <div class="score-row">
-            <div class="score-meta">
-              <span class="score-name">Neutral</span>
-              <span class="score-pct" id="pctNeutral">0%</span>
+          <div class="agg-bar-item">
+            <div class="agg-bar-head">
+              <span class="agg-bar-name" style="color:var(--neu)">Neutral</span>
+              <span class="agg-bar-pct" id="aggNeuPct" style="color:var(--neu)"></span>
             </div>
-            <div class="score-track">
-              <div class="score-fill" id="fillNeutral" style="background:#fbbf24"></div>
-            </div>
+            <div class="bar-bg"><div class="bar-fill bf-neu" id="aggNeuBar" style="width:0%"></div></div>
           </div>
-          <div class="score-row">
-            <div class="score-meta">
-              <span class="score-name">Bearish</span>
-              <span class="score-pct" id="pctBearish">0%</span>
+          <div class="agg-bar-item">
+            <div class="agg-bar-head">
+              <span class="agg-bar-name" style="color:var(--bear)">Bearish</span>
+              <span class="agg-bar-pct" id="aggBearPct" style="color:var(--bear)"></span>
             </div>
-            <div class="score-track">
-              <div class="score-fill" id="fillBearish" style="background:#f87171"></div>
-            </div>
+            <div class="bar-bg"><div class="bar-fill bf-bear" id="aggBearBar" style="width:0%"></div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="samples-panel">
-      <div class="samples-label">Sample Headlines</div>
-      {% for s in samples %}
-      <div class="sample-item" onclick="useSample(this)">{{ s }}</div>
-      {% endfor %}
+    <!-- Single headline result -->
+    <div class="result-card hidden" id="singleResult">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-preview" id="resultPreview"></div>
+      <div class="conf-row">
+        <div>
+          <div class="conf-header"><span class="conf-name" style="color:var(--bull)">Bullish</span><span class="conf-pct" id="bullPct" style="color:var(--bull)"></span></div>
+          <div class="conf-bar-bg"><div class="conf-bar bar-bull" id="bullBar" style="width:0%"></div></div>
+        </div>
+        <div>
+          <div class="conf-header"><span class="conf-name" style="color:var(--neu)">Neutral</span><span class="conf-pct" id="neuPct" style="color:var(--neu)"></span></div>
+          <div class="conf-bar-bg"><div class="conf-bar bar-neu" id="neuBar" style="width:0%"></div></div>
+        </div>
+        <div>
+          <div class="conf-header"><span class="conf-name" style="color:var(--bear)">Bearish</span><span class="conf-pct" id="bearPct" style="color:var(--bear)"></span></div>
+          <div class="conf-bar-bg"><div class="conf-bar bar-bear" id="bearBar" style="width:0%"></div></div>
+        </div>
+      </div>
     </div>
 
-  </div>
+    <!-- Batch result -->
+    <div class="hidden" id="batchResult">
+      <div class="agg-card">
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem">Aggregate Sentiment</div>
+        <div class="agg-label-big" id="aggLabel"></div>
+        <div class="agg-meta" id="aggCount"></div>
+        <div class="conf-row">
+          <div>
+            <div class="conf-header"><span class="conf-name" style="color:var(--bull)">Bullish</span><span class="conf-pct" id="aggBull" style="color:var(--bull)"></span></div>
+            <div class="conf-bar-bg"><div class="conf-bar bar-bull" id="aggBullBarBatch" style="width:0%"></div></div>
+          </div>
+          <div>
+            <div class="conf-header"><span class="conf-name" style="color:var(--neu)">Neutral</span><span class="conf-pct" id="aggNeu" style="color:var(--neu)"></span></div>
+            <div class="conf-bar-bg"><div class="conf-bar bar-neu" id="aggNeuBarBatch" style="width:0%"></div></div>
+          </div>
+          <div>
+            <div class="conf-header"><span class="conf-name" style="color:var(--bear)">Bearish</span><span class="conf-pct" id="aggBear" style="color:var(--bear)"></span></div>
+            <div class="conf-bar-bg"><div class="conf-bar bar-bear" id="aggBearBarBatch" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="section-label" style="margin-bottom:.65rem">Individual Results</div>
+      <div class="headline-list" id="headlineList"></div>
+    </div>
 
-  <script>
-    function useSample(el) {
-      document.getElementById('inputText').value = el.textContent.trim();
-    }
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+        </svg>
+      </div>
+      <div class="empty-text">Select a stock ticker to see live data and sentiment,<br>or paste a headline to analyze it directly.</div>
+    </div>
+  </main>
 
-    async function analyze() {
-      const text = document.getElementById('inputText').value.trim();
-      if (!text) return;
+</div>
 
-      const btn = document.getElementById('analyzeBtn');
-      btn.disabled = true;
-      btn.textContent = 'Analyzing...';
+<script>
+'use strict';
 
-      try {
-        const res  = await fetch('/api/analyze', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ text }),
-        });
-        const data = await res.json();
-        if (data.error) { alert(data.error); return; }
+let mode = 'stock';
 
-        const card = document.getElementById('resultCard');
-        card.classList.add('visible');
+// ── GPU status ────────────────────────────────────────────────────────
+(function pollGpu() {
+  function update() {
+    fetch('https://spbdatascience.org/api/gpu-status')
+      .then(r => r.json())
+      .then(d => {
+        const s   = d.status || 'offline';
+        const dot = document.getElementById('gpuDot');
+        const txt = document.getElementById('gpuTxt');
+        dot.className = 'gpu-dot ' + s;
+        txt.className = 'gpu-txt ' + s;
+        txt.textContent = s === 'ready' ? 'GPU Ready' : s === 'busy' ? 'GPU Busy' : 'GPU Offline';
+      })
+      .catch(() => {
+        document.getElementById('gpuTxt').textContent = 'GPU Offline';
+      });
+  }
+  update();
+  setInterval(update, 20000);
+})();
 
-        const lbl = document.getElementById('resultLabel');
-        lbl.textContent  = data.label;
-        lbl.style.color  = data.color;
+// ── Mode switching ────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  ['stock','single','batch'].forEach(id => {
+    document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1)).classList.toggle('active', id === m);
+    document.getElementById(id + 'Panel').classList.toggle('hidden', id !== m);
+  });
+  document.getElementById('samplesSection').classList.toggle('hidden', m === 'stock');
+  document.getElementById('singleResult').classList.add('hidden');
+  document.getElementById('batchResult').classList.add('hidden');
+  document.getElementById('stockResult').classList.add('hidden');
+  document.getElementById('gpuBanner').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+  if (m === 'stock') {
+    document.getElementById('mainTitle').textContent = 'Stock Tracker';
+    document.getElementById('mainSub').textContent = 'Live price data from Yahoo Finance + AI sentiment scoring on recent news';
+  } else {
+    document.getElementById('mainTitle').textContent = 'Market Sentiment';
+    document.getElementById('mainSub').textContent = 'NLP analysis using DistilRoBERTa fine-tuned on financial news';
+  }
+}
 
-        setBar('Bullish', data.scores['Bullish']);
-        setBar('Neutral',  data.scores['Neutral']);
-        setBar('Bearish',  data.scores['Bearish']);
+// ── Stock mode ────────────────────────────────────────────────────────
+function quickTicker(sym) {
+  setMode('stock');
+  document.getElementById('tickerInput').value = sym;
+  loadStock();
+}
 
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Analyze';
-      }
-    }
+function useSample(text) {
+  setMode('single');
+  document.getElementById('singleInput').value = text;
+  analyzeSingle();
+}
 
-    function setBar(name, pct) {
-      document.getElementById('pct'  + name).textContent = pct.toFixed(1) + '%';
-      document.getElementById('fill' + name).style.width = Math.min(pct, 100) + '%';
-    }
+async function loadStock() {
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  if (!ticker) return;
+  const goBtn = document.querySelector('.btn-primary');
+  goBtn.disabled = true;
+  goBtn.textContent = 'Loading...';
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('stockResult').classList.add('hidden');
+  document.getElementById('gpuBanner').classList.add('hidden');
 
-    document.getElementById('inputText').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyze(); }
+  try {
+    const res  = await fetch('/api/stock-sentiment', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ticker}),
     });
-  </script>
+    const data = await res.json();
+    if (data.error) { alert(data.error); document.getElementById('emptyState').classList.remove('hidden'); return; }
+    renderStock(data);
+  } catch (e) {
+    alert('Failed to load stock data. Try again.');
+    document.getElementById('emptyState').classList.remove('hidden');
+  } finally {
+    goBtn.disabled = false;
+    goBtn.textContent = 'Go';
+  }
+}
+
+const PLOTLY_BASE = {
+  paper_bgcolor: '#141414', plot_bgcolor: '#141414',
+  font: {color: '#666', family: 'Inter, sans-serif', size: 11},
+  xaxis: {gridcolor: '#1e1e1e', zerolinecolor:'#2a2a2a', tickfont:{size:10}},
+  yaxis: {gridcolor: '#1e1e1e', zerolinecolor:'#2a2a2a', tickfont:{size:10}},
+  margin: {l:50, r:18, t:8, b:40},
+};
+
+function renderStock(data) {
+  const stats   = data.stats;
+  const prices  = data.prices;
+  const news    = data.news || [];
+  const sent    = data.sentiment;
+  const isUp    = stats.pct >= 0;
+
+  // Header
+  document.getElementById('sTickerBadge').textContent = data.ticker;
+  document.getElementById('sName').textContent        = data.name;
+  document.getElementById('sSector').textContent      = data.sector || '';
+
+  const cur = stats.currency === 'USD' ? '$' : (stats.currency + ' ');
+  document.getElementById('sPrice').textContent = cur + stats.current.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  const chgEl = document.getElementById('sChg');
+  const chgSign = stats.change >= 0 ? '+' : '';
+  chgEl.textContent = `${chgSign}${stats.change.toFixed(2)} (${chgSign}${stats.pct.toFixed(2)}%)`;
+  chgEl.className = 'stock-chg ' + (stats.pct > 0 ? 'pos' : stats.pct < 0 ? 'neg' : 'flat');
+
+  document.getElementById('sStatChg').textContent  = (stats.pct >= 0 ? '+' : '') + stats.pct.toFixed(2) + '%';
+  document.getElementById('sStatChg').style.color  = stats.pct >= 0 ? 'var(--bull)' : 'var(--bear)';
+  document.getElementById('sStat52H').textContent  = stats.high52 ? cur + stats.high52.toLocaleString() : '--';
+  document.getElementById('sStat52L').textContent  = stats.low52  ? cur + stats.low52.toLocaleString()  : '--';
+
+  // Price chart
+  const lineColor = isUp ? '#4ade80' : '#f87171';
+  const fillColor = isUp ? 'rgba(74,222,128,0.06)' : 'rgba(248,113,113,0.06)';
+
+  Plotly.react('stockChart', [
+    {
+      type: 'scatter', mode: 'lines', name: 'Close',
+      x: prices.dates, y: prices.close,
+      line: {color: lineColor, width: 2.5},
+      fill: 'tozeroy', fillcolor: fillColor,
+      hovertemplate: '<b>%{x}</b><br>' + cur + '%{y:.2f}<extra></extra>',
+    },
+  ], {
+    ...PLOTLY_BASE,
+    showlegend: false,
+    yaxis: {...PLOTLY_BASE.yaxis, tickprefix: cur},
+  }, {responsive: true, displayModeBar: false});
+
+  // News list
+  const nl = document.getElementById('newsList');
+  if (!news.length) {
+    nl.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:.5rem 0">No recent news found.</div>';
+  } else if (!sent || data.gpu_offline) {
+    // No sentiment - show news without badges
+    nl.innerHTML = news.map(n => `
+      <a class="news-card" href="${n.link || '#'}" target="_blank" rel="noopener">
+        <div class="news-body">
+          <div class="news-title">${esc(n.title)}</div>
+          <div class="news-meta">${esc(n.publisher || '')} ${n.time ? formatDate(n.time) : ''}</div>
+        </div>
+      </a>`).join('');
+    document.getElementById('gpuBanner').classList.remove('hidden');
+  } else {
+    // Sentiment available
+    const results = sent.results || [];
+    nl.innerHTML = news.map((n, i) => {
+      const r   = results[i];
+      const lbl = r ? r.label  : '';
+      const pct = r ? Math.max(r.scores.Bullish, r.scores.Neutral, r.scores.Bearish) : 0;
+      const bc  = lbl === 'Bullish' ? 'nb-bull' : lbl === 'Bearish' ? 'nb-bear' : 'nb-neu';
+      return `<a class="news-card" href="${n.link || '#'}" target="_blank" rel="noopener">
+        ${r ? `<span class="news-badge ${bc}">${lbl}</span>` : ''}
+        <div class="news-body">
+          <div class="news-title">${esc(n.title)}</div>
+          <div class="news-meta">${esc(n.publisher || '')} ${n.time ? formatDate(n.time) : ''}</div>
+        </div>
+        ${r ? `<span class="news-conf">${pct}%</span>` : ''}
+      </a>`;
+    }).join('');
+
+    // Aggregate bars
+    const agg = sent.aggregate;
+    if (agg) {
+      document.getElementById('aggBullPct').textContent = agg.Bullish + '%';
+      document.getElementById('aggNeuPct').textContent  = agg.Neutral  + '%';
+      document.getElementById('aggBearPct').textContent = agg.Bearish  + '%';
+      setTimeout(() => {
+        document.getElementById('aggBullBar').style.width = agg.Bullish + '%';
+        document.getElementById('aggNeuBar').style.width  = agg.Neutral  + '%';
+        document.getElementById('aggBearBar').style.width = agg.Bearish  + '%';
+      }, 80);
+
+      const aggPill = document.getElementById('aggSentimentPill');
+      const al      = sent.aggregate_label || '';
+      const ac      = al === 'Bullish' ? 'sp-bull' : al === 'Bearish' ? 'sp-bear' : 'sp-neu';
+      aggPill.textContent = al;
+      aggPill.className = 'sentiment-pill ' + ac;
+      aggPill.classList.remove('hidden');
+      document.getElementById('aggBarsSection').classList.remove('hidden');
+    }
+  }
+
+  document.getElementById('stockResult').classList.remove('hidden');
+}
+
+// ── Headline / Batch mode ─────────────────────────────────────────────
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span>Analyzing...' : label;
+}
+
+function badgeClass(label) {
+  return label === 'Bullish' ? 'nb-bull' : label === 'Bearish' ? 'nb-bear' : 'nb-neu';
+}
+
+function analyzeSingle() {
+  const text = document.getElementById('singleInput').value.trim();
+  if (!text) return;
+  setLoading('singleBtn', true, 'Analyze Sentiment');
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('singleResult').classList.add('hidden');
+  document.getElementById('gpuBanner').classList.add('hidden');
+
+  fetch('/api/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})})
+  .then(r => r.json())
+  .then(data => {
+    if (data.gpu_offline) { document.getElementById('gpuBanner').classList.remove('hidden'); return; }
+    if (data.error) { alert(data.error); return; }
+    const s = data.scores;
+    document.getElementById('resultLabel').textContent = data.label;
+    document.getElementById('resultLabel').style.color = data.color;
+    document.getElementById('resultPreview').textContent = text;
+    document.getElementById('bullPct').textContent = s.Bullish + '%';
+    document.getElementById('neuPct').textContent  = s.Neutral  + '%';
+    document.getElementById('bearPct').textContent = s.Bearish  + '%';
+    document.getElementById('singleResult').classList.remove('hidden');
+    requestAnimationFrame(() => {
+      document.getElementById('bullBar').style.width = s.Bullish + '%';
+      document.getElementById('neuBar').style.width  = s.Neutral  + '%';
+      document.getElementById('bearBar').style.width = s.Bearish  + '%';
+    });
+  })
+  .catch(() => alert('Request failed. Try again.'))
+  .finally(() => setLoading('singleBtn', false, 'Analyze Sentiment'));
+}
+
+function analyzeBatch() {
+  const headlines = document.getElementById('batchInput').value.split('\n').map(h => h.trim()).filter(Boolean);
+  if (!headlines.length) return;
+  setLoading('batchBtn', true, 'Analyze All');
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('batchResult').classList.add('hidden');
+  document.getElementById('gpuBanner').classList.add('hidden');
+
+  fetch('/api/batch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({headlines})})
+  .then(r => r.json())
+  .then(data => {
+    if (data.gpu_offline) { document.getElementById('gpuBanner').classList.remove('hidden'); return; }
+    if (data.error) { alert(data.error); return; }
+    const agg = data.aggregate;
+    document.getElementById('aggLabel').textContent = data.aggregate_label;
+    document.getElementById('aggLabel').style.color = data.aggregate_color;
+    document.getElementById('aggCount').textContent = data.count + ' headlines analyzed';
+    document.getElementById('aggBull').textContent = agg.Bullish + '%';
+    document.getElementById('aggNeu').textContent  = agg.Neutral  + '%';
+    document.getElementById('aggBear').textContent = agg.Bearish  + '%';
+    document.getElementById('batchResult').classList.remove('hidden');
+    requestAnimationFrame(() => {
+      document.getElementById('aggBullBarBatch').style.width = agg.Bullish + '%';
+      document.getElementById('aggNeuBarBatch').style.width  = agg.Neutral  + '%';
+      document.getElementById('aggBearBarBatch').style.width = agg.Bearish  + '%';
+    });
+    document.getElementById('headlineList').innerHTML = data.results.map(r => {
+      const pct = Math.max(r.scores.Bullish, r.scores.Neutral, r.scores.Bearish);
+      return `<div class="headline-card">
+        <span class="h-badge ${badgeClass(r.label)}">${r.label}</span>
+        <span class="h-text">${esc(r.text)}</span>
+        <span class="h-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+  })
+  .catch(() => alert('Request failed. Try again.'))
+  .finally(() => setLoading('batchBtn', false, 'Analyze All'));
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+// Keyboard shortcut for single mode
+document.getElementById('singleInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); analyzeSingle(); }
+});
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadStock();
+});
+</script>
 </body>
 </html>
