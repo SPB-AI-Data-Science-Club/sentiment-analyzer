@@ -14,10 +14,10 @@ Live stock data paired with transformer-scored news sentiment.
 
 ## Architecture
 
-The web app runs on a CPU VPS and never loads the model itself. Inference requests are proxied to a GPU worker over a private Tailscale network; stock prices and news come from Yahoo Finance via `yfinance` directly on the VPS. The split keeps the public-facing app light while the 5080 does the heavy lifting.
+The web app runs on a CPU VPS and never loads the model itself. Inference requests are proxied to a GPU worker over a private Tailscale network; stock prices and news come from Yahoo Finance via `yfinance` directly on the VPS. The split keeps the public-facing app light while the club GPU server does the heavy lifting.
 
 ```
-browser -> Flask (VPS) -> GPU worker (RTX 5080, Tailscale)
+browser -> Flask (VPS) -> GPU worker (club server, Tailscale)
                   \-> yfinance (prices + news)
 ```
 

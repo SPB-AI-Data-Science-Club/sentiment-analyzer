@@ -122,17 +122,43 @@ def batch_analyze():
         return gpu_unavailable()
 
 
+INDICES = [("^GSPC", "S&P 500"), ("^IXIC", "Nasdaq"), ("^DJI", "Dow Jones")]
+
+
+@app.route("/api/indices")
+def market_indices():
+    """Lightweight market snapshot for the header strip."""
+    out = []
+    for sym, label in INDICES:
+        try:
+            hist = yf.Ticker(sym).history(period="5d").dropna(subset=["Close"])
+            if len(hist) < 2:
+                continue
+            cur, prev = float(hist["Close"].iloc[-1]), float(hist["Close"].iloc[-2])
+            out.append({
+                "label": label,
+                "price": round(cur, 2),
+                "pct":   round((cur - prev) / prev * 100, 2),
+            })
+        except Exception:
+            continue
+    return jsonify({"indices": out})
+
+
 @app.route("/api/stock", methods=["POST"])
 def stock_data():
     """Return 30-day price history + recent news for a ticker. Always works (no GPU needed)."""
     data   = request.get_json(force=True)
     ticker = (data.get("ticker") or "").strip().upper()
+    period = data.get("period", "1mo")
+    if period not in {"1mo", "3mo", "6mo", "1y"}:
+        period = "1mo"
     if not ticker or len(ticker) > 10:
         return jsonify({"error": "Invalid ticker symbol"}), 400
 
     try:
         t    = yf.Ticker(ticker)
-        hist = t.history(period="1mo").dropna(subset=["Close"])
+        hist = t.history(period=period).dropna(subset=["Close"])
         if hist.empty:
             return jsonify({"error": f"No data found for '{ticker}'. Check the ticker symbol."}), 404
 
@@ -153,8 +179,12 @@ def stock_data():
             "name":     info.get("longName") or info.get("shortName") or ticker,
             "sector":   info.get("sector", ""),
             "exchange": info.get("exchange", ""),
+            "period": period,
             "prices": {
                 "dates":   dates,
+                "open":    [round(float(v), 2) for v in hist["Open"]],
+                "high":    [round(float(v), 2) for v in hist["High"]],
+                "low":     [round(float(v), 2) for v in hist["Low"]],
                 "close":   closes,
                 "volumes": volumes,
             },
@@ -178,12 +208,15 @@ def stock_sentiment():
     """Fetch stock data + run GPU sentiment on news headlines."""
     data   = request.get_json(force=True)
     ticker = (data.get("ticker") or "").strip().upper()
+    period = data.get("period", "1mo")
+    if period not in {"1mo", "3mo", "6mo", "1y"}:
+        period = "1mo"
     if not ticker:
         return jsonify({"error": "No ticker provided"}), 400
 
     try:
         t    = yf.Ticker(ticker)
-        hist = t.history(period="1mo").dropna(subset=["Close"])
+        hist = t.history(period=period).dropna(subset=["Close"])
         if hist.empty:
             return jsonify({"error": f"No data found for '{ticker}'"}), 404
         info = t.info
@@ -217,7 +250,15 @@ def stock_sentiment():
         "ticker":      ticker,
         "name":        info.get("longName") or info.get("shortName") or ticker,
         "sector":      info.get("sector", ""),
-        "prices":      {"dates": dates, "close": closes, "volumes": volumes},
+        "period":      period,
+        "prices": {
+            "dates":   dates,
+            "open":    [round(float(v), 2) for v in hist["Open"]],
+            "high":    [round(float(v), 2) for v in hist["High"]],
+            "low":     [round(float(v), 2) for v in hist["Low"]],
+            "close":   closes,
+            "volumes": volumes,
+        },
         "stats": {
             "current":  end,
             "change":   chg,

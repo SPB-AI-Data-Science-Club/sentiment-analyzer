@@ -95,10 +95,23 @@
     .stat-label{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
     .stat-val{font-size:1rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text)}
 
+    /* Market indices strip */
+    .index-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+    .index-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;display:flex;justify-content:space-between;align-items:center}
+    .index-name{font-size:.72rem;font-weight:700;color:var(--dim)}
+    .index-nums{text-align:right}
+    .index-price{font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:600}
+    .index-pct{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600}
+
+    /* Period chips */
+    .period-row{display:flex;gap:.3rem}
+    .period-chip{padding:.25rem .7rem;border-radius:6px;font-size:.72rem;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer;border:1px solid var(--border-l);color:var(--dim);background:var(--surface-2);transition:all .15s}
+    .period-chip.active{background:rgba(102,0,51,.3);border-color:rgba(139,0,68,.5);color:#fff}
+
     /* Chart */
     .chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem 1rem;margin-bottom:1.5rem}
     .chart-title{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.85rem}
-    #stockChart{height:220px}
+    #stockChart{height:300px}
 
     /* News */
     .news-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
@@ -261,9 +274,12 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <div>
         <div class="gpu-banner-title">Sentiment GPU Offline</div>
-        <div class="gpu-banner-sub">Stock data and charts are fully available. Sentiment scoring requires the RTX 5080 GPU compute server, which is currently offline.</div>
+        <div class="gpu-banner-sub">Stock data and charts are fully available. Sentiment scoring requires the club's GPU servers, which is currently offline.</div>
       </div>
     </div>
+
+    <!-- Market indices strip (stock mode) -->
+    <div class="index-strip hidden" id="indexStrip"></div>
 
     <!-- Stock mode result panel -->
     <div id="stockResult" class="hidden">
@@ -297,7 +313,15 @@
       </div>
 
       <div class="chart-box">
-        <div class="chart-title">30-Day Price History</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+          <div class="chart-title" style="margin-bottom:0" id="chartTitle">Price History</div>
+          <div class="period-row" id="periodRow">
+            <button class="period-chip active" data-period="1mo">1M</button>
+            <button class="period-chip" data-period="3mo">3M</button>
+            <button class="period-chip" data-period="6mo">6M</button>
+            <button class="period-chip" data-period="1y">1Y</button>
+          </div>
+        </div>
         <div id="stockChart"></div>
       </div>
 
@@ -433,7 +457,9 @@ function setMode(m) {
   document.getElementById('stockResult').classList.add('hidden');
   document.getElementById('gpuBanner').classList.add('hidden');
   document.getElementById('emptyState').classList.remove('hidden');
+  document.getElementById('indexStrip').classList.toggle('hidden', m !== 'stock');
   if (m === 'stock') {
+    loadIndices();
     document.getElementById('mainTitle').textContent = 'Stock Tracker';
     document.getElementById('mainSub').textContent = 'Live price data from Yahoo Finance + AI sentiment scoring on recent news';
   } else {
@@ -455,6 +481,35 @@ function useSample(text) {
   analyzeSingle();
 }
 
+let currentPeriod = '1mo';
+document.querySelectorAll('.period-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.period-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentPeriod = chip.dataset.period;
+    loadStock();
+  });
+});
+
+function loadIndices() {
+  fetch('/api/indices').then(r => r.json()).then(d => {
+    const strip = document.getElementById('indexStrip');
+    if (!d.indices || !d.indices.length) return;
+    strip.innerHTML = d.indices.map(ix => {
+      const cls = ix.pct > 0 ? 'pos' : ix.pct < 0 ? 'neg' : 'flat';
+      const sign = ix.pct >= 0 ? '+' : '';
+      return `<div class="index-card">
+        <span class="index-name">${ix.label}</span>
+        <span class="index-nums">
+          <div class="index-price">${ix.price.toLocaleString()}</div>
+          <div class="index-pct ${cls}">${sign}${ix.pct.toFixed(2)}%</div>
+        </span>
+      </div>`;
+    }).join('');
+    if (mode === 'stock') strip.classList.remove('hidden');
+  }).catch(() => {});
+}
+
 async function loadStock() {
   const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
   if (!ticker) return;
@@ -468,7 +523,7 @@ async function loadStock() {
   try {
     const res  = await fetch('/api/stock-sentiment', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ticker}),
+      body: JSON.stringify({ticker, period: currentPeriod}),
     });
     const data = await res.json();
     if (data.error) { alert(data.error); document.getElementById('emptyState').classList.remove('hidden'); return; }
@@ -515,22 +570,36 @@ function renderStock(data) {
   document.getElementById('sStat52H').textContent  = stats.high52 ? cur + stats.high52.toLocaleString() : '--';
   document.getElementById('sStat52L').textContent  = stats.low52  ? cur + stats.low52.toLocaleString()  : '--';
 
-  // Price chart
-  const lineColor = isUp ? '#4ade80' : '#f87171';
-  const fillColor = isUp ? 'rgba(74,222,128,0.06)' : 'rgba(248,113,113,0.06)';
+  // Candlestick + volume chart
+  const periodNames = {'1mo': '1-Month', '3mo': '3-Month', '6mo': '6-Month', '1y': '1-Year'};
+  document.getElementById('chartTitle').textContent = (periodNames[data.period] || '') + ' Price History';
 
-  Plotly.react('stockChart', [
+  const traces = [
     {
-      type: 'scatter', mode: 'lines', name: 'Close',
-      x: prices.dates, y: prices.close,
-      line: {color: lineColor, width: 2.5},
-      fill: 'tozeroy', fillcolor: fillColor,
-      hovertemplate: '<b>%{x}</b><br>' + cur + '%{y:.2f}<extra></extra>',
+      type: 'candlestick', name: 'OHLC',
+      x: prices.dates,
+      open: prices.open, high: prices.high, low: prices.low, close: prices.close,
+      increasing: {line: {color: '#4ade80', width: 1}, fillcolor: '#4ade80'},
+      decreasing: {line: {color: '#f87171', width: 1}, fillcolor: '#f87171'},
+      yaxis: 'y',
     },
-  ], {
+    {
+      type: 'bar', name: 'Volume',
+      x: prices.dates, y: prices.volumes,
+      marker: {color: prices.close.map((c, i) =>
+        c >= (prices.open ? prices.open[i] : c) ? 'rgba(74,222,128,.25)' : 'rgba(248,113,113,.25)')},
+      yaxis: 'y2',
+      hovertemplate: '%{y:.3s}<extra>volume</extra>',
+    },
+  ];
+
+  Plotly.react('stockChart', traces, {
     ...PLOTLY_BASE,
     showlegend: false,
-    yaxis: {...PLOTLY_BASE.yaxis, tickprefix: cur},
+    dragmode: false,
+    xaxis: {...PLOTLY_BASE.xaxis, rangeslider: {visible: false}},
+    yaxis:  {...PLOTLY_BASE.yaxis, tickprefix: cur, domain: [0.28, 1]},
+    yaxis2: {gridcolor: '#1a1a1a', tickfont: {size: 9}, domain: [0, 0.22], side: 'right'},
   }, {responsive: true, displayModeBar: false});
 
   // News list
@@ -688,6 +757,8 @@ document.getElementById('singleInput').addEventListener('keydown', e => {
 document.getElementById('tickerInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') loadStock();
 });
+
+loadIndices();
 </script>
 </body>
 </html>
