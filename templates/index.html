@@ -8,13 +8,13 @@
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#090909;--surface:#141414;--surface-2:#1a1a1a;--border:#222;--border-l:#2e2e2e;--text:#ebebeb;--dim:#aaa;--muted:#666;--bull:#4ade80;--neu:#fbbf24;--bear:#f87171;--blue:#4a90d9;--accent:#8b0044;--accent2:#660033;--radius:10px}
+    :root{--bg:#0c1322;--surface:#141f36;--surface-2:#16223c;--border:#22304d;--border-l:#2c3a5c;--text:#e9eef8;--dim:#a3b1cc;--muted:#6e7f9d;--bull:#4ade80;--neu:#fbbf24;--bear:#f87171;--blue:#4a90d9;--accent:#6494e8;--accent2:#3f74d4;--radius:10px}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.6}
     a{color:inherit;text-decoration:none}
 
     /* Layout */
     .shell{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
-    .sidebar{background:#0d0d0d;border-right:1px solid var(--border);padding:1.75rem 1.4rem;display:flex;flex-direction:column;gap:1.4rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar{background:#0c1322;border-right:1px solid var(--border);padding:1.75rem 1.4rem;display:flex;flex-direction:column;gap:1.4rem;position:sticky;top:0;height:100vh;overflow-y:auto}
     .main{padding:2.25rem 2.5rem;overflow-y:auto}
 
     /* Header */
@@ -27,17 +27,17 @@
     .gpu-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
     .gpu-dot.ready{background:#4ade80;box-shadow:0 0 5px #4ade8099;animation:glow 2s ease-in-out infinite}
     .gpu-dot.busy{background:#fbbf24;animation:glow 1s ease-in-out infinite}
-    .gpu-dot.offline{background:#444}
+    .gpu-dot.offline{background:#38486e}
     .gpu-txt.ready{color:#4ade80}
     .gpu-txt.busy{color:#fbbf24}
-    .gpu-txt.offline{color:#666}
+    .gpu-txt.offline{color:#6e7f9d}
     @keyframes glow{0%,100%{opacity:1}50%{opacity:.45}}
 
     /* Tabs */
     .section-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.55rem}
     .tab-row{display:flex;gap:.3rem;margin-bottom:.9rem}
     .tab{flex:1;padding:.45rem .4rem;border-radius:6px;font-size:.76rem;font-weight:600;text-align:center;cursor:pointer;border:1px solid var(--border-l);color:var(--dim);background:var(--surface-2);transition:all .15s}
-    .tab.active{background:rgba(102,0,51,.3);border-color:rgba(102,0,51,.5);color:#fff}
+    .tab.active{background:rgba(63, 116, 212,.3);border-color:rgba(63, 116, 212,.5);color:#fff}
 
     /* Inputs */
     textarea{width:100%;background:var(--surface-2);border:1px solid var(--border-l);border-radius:8px;padding:.75rem;font-size:.88rem;font-family:inherit;color:var(--text);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6}
@@ -65,7 +65,7 @@
     /* Ticker grid */
     .ticker-grid{display:grid;grid-template-columns:1fr 1fr;gap:.3rem}
     .ticker-chip{padding:.4rem .55rem;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);cursor:pointer;transition:all .15s;text-align:left}
-    .ticker-chip:hover{border-color:rgba(102,0,51,.4);background:rgba(102,0,51,.12)}
+    .ticker-chip:hover{border-color:rgba(63, 116, 212,.4);background:rgba(63, 116, 212,.12)}
     .ticker-chip-sym{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;color:var(--text);display:block}
     .ticker-chip-name{font-size:.65rem;color:var(--muted);display:block;margin-top:.05rem}
 
@@ -81,7 +81,7 @@
     /* Stock header */
     .stock-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
     .stock-name-row{}
-    .stock-ticker-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:.08em;color:#888;background:var(--surface-2);border:1px solid var(--border-l);border-radius:4px;padding:.15rem .45rem;margin-bottom:.3rem}
+    .stock-ticker-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:.08em;color:#8494b0;background:var(--surface-2);border:1px solid var(--border-l);border-radius:4px;padding:.15rem .45rem;margin-bottom:.3rem}
     .stock-name{font-size:1.45rem;font-weight:800;letter-spacing:-.025em;margin-bottom:.2rem}
     .stock-sector{font-size:.75rem;color:var(--muted)}
     .stock-price-row{text-align:right}
@@ -106,7 +106,7 @@
     /* Period chips */
     .period-row{display:flex;gap:.3rem}
     .period-chip{padding:.25rem .7rem;border-radius:6px;font-size:.72rem;font-weight:600;font-family:'JetBrains Mono',monospace;cursor:pointer;border:1px solid var(--border-l);color:var(--dim);background:var(--surface-2);transition:all .15s}
-    .period-chip.active{background:rgba(102,0,51,.3);border-color:rgba(139,0,68,.5);color:#fff}
+    .period-chip.active{background:rgba(63, 116, 212,.3);border-color:rgba(100, 148, 232,.5);color:#fff}
 
     /* Chart */
     .chart-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem 1rem;margin-bottom:1.5rem}
@@ -538,10 +538,10 @@ async function loadStock() {
 }
 
 const PLOTLY_BASE = {
-  paper_bgcolor: '#141414', plot_bgcolor: '#141414',
-  font: {color: '#666', family: 'Inter, sans-serif', size: 11},
-  xaxis: {gridcolor: '#1e1e1e', zerolinecolor:'#2a2a2a', tickfont:{size:10}},
-  yaxis: {gridcolor: '#1e1e1e', zerolinecolor:'#2a2a2a', tickfont:{size:10}},
+  paper_bgcolor: '#141f36', plot_bgcolor: '#141f36',
+  font: {color: '#6e7f9d', family: 'Inter, sans-serif', size: 11},
+  xaxis: {gridcolor: '#182440', zerolinecolor:'#22304d', tickfont:{size:10}},
+  yaxis: {gridcolor: '#182440', zerolinecolor:'#22304d', tickfont:{size:10}},
   margin: {l:50, r:18, t:8, b:40},
 };
 
@@ -599,7 +599,7 @@ function renderStock(data) {
     dragmode: false,
     xaxis: {...PLOTLY_BASE.xaxis, rangeslider: {visible: false}},
     yaxis:  {...PLOTLY_BASE.yaxis, tickprefix: cur, domain: [0.28, 1]},
-    yaxis2: {gridcolor: '#1a1a1a', tickfont: {size: 9}, domain: [0, 0.22], side: 'right'},
+    yaxis2: {gridcolor: '#16223c', tickfont: {size: 9}, domain: [0, 0.22], side: 'right'},
   }, {responsive: true, displayModeBar: false});
 
   // News list
