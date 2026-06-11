@@ -529,7 +529,7 @@ async function loadStock() {
     if (data.error) { alert(data.error); document.getElementById('emptyState').classList.remove('hidden'); return; }
     renderStock(data);
   } catch (e) {
-    alert('Failed to load stock data. Try again.');
+    alert('Failed to load stock data; please try again.');
     document.getElementById('emptyState').classList.remove('hidden');
   } finally {
     goBtn.disabled = false;
@@ -697,7 +697,7 @@ function analyzeSingle() {
       document.getElementById('bearBar').style.width = s.Bearish  + '%';
     });
   })
-  .catch(() => alert('Request failed. Try again.'))
+  .catch(() => alert('Request failed; please try again.'))
   .finally(() => setLoading('singleBtn', false, 'Analyze Sentiment'));
 }
 
@@ -736,7 +736,7 @@ function analyzeBatch() {
       </div>`;
     }).join('');
   })
-  .catch(() => alert('Request failed. Try again.'))
+  .catch(() => alert('Request failed; please try again.'))
   .finally(() => setLoading('batchBtn', false, 'Analyze All'));
 }
 
