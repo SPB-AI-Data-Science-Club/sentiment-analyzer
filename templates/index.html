@@ -203,7 +203,7 @@
     <div>
       <div class="gpu-pill" id="gpuPill">
         <div class="gpu-dot offline" id="gpuDot"></div>
-        <span class="gpu-txt offline" id="gpuTxt">Checking GPU...</span>
+        <span class="gpu-txt offline" id="gpuTxt">GPUs</span>
       </div>
     </div>
 
@@ -434,10 +434,10 @@ let mode = 'stock';
         const txt = document.getElementById('gpuTxt');
         dot.className = 'gpu-dot ' + s;
         txt.className = 'gpu-txt ' + s;
-        txt.textContent = s === 'ready' ? 'GPU Ready' : s === 'busy' ? 'GPU Busy' : 'GPU Offline';
+        txt.textContent = s === 'ready' ? 'GPUs Online' : s === 'busy' ? 'GPUs Busy' : 'GPUs Offline';
       })
       .catch(() => {
-        document.getElementById('gpuTxt').textContent = 'GPU Offline';
+        document.getElementById('gpuTxt').textContent = 'GPUs Offline';
       });
   }
   update();
